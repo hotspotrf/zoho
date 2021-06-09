@@ -1,0 +1,176 @@
+/////////////////////////
+///// Set Lead Data Variable
+LeadData = zoho.crm.getRecordById("Leads",LeadID);
+///// API Inputs from Lead
+FullAddress = LeadData.get("Full_Address");
+Terrain = LeadData.get("Terrain").getPrefix(" ").lower();
+///// Height Calculation
+FloorLevel = LeadData.get("Floor_Level");
+Height = FloorLevel * 12;
+///// Default Values
+Frequency = 915;
+Antenna = 2.3;
+Cable = 0;
+Unit = "ft";
+/////////////////////////
+///// HotspotRF Webhook Parameters Map
+ParamMap = Map();
+// /////
+ParamMap.put("addy",FullAddress);
+ParamMap.put("env",Terrain);
+ParamMap.put("fq",Frequency);
+ParamMap.put("ant",Antenna);
+ParamMap.put("cbl",Cable);
+ParamMap.put("ht",Height);
+ParamMap.put("unit",Unit);
+ParamMap.put("key","YOUR HOTSPOTRF API KEY FROM https://hotspotrf.com/api/");
+// info "ParamMap: "+ParamMap;
+/////////////////////////
+///// HotspotRF Webhook
+try 
+{
+	HotspotRFData = invokeurl
+	[
+		url :"https://app.api.hotspotrf.com/v1"
+		type :GET
+		parameters:ParamMap
+	];
+	info "HotspotRFData: " + HotspotRFData;
+	/////////////////////////
+	///// HotspotRFData Returned Values
+	credit_balance = HotspotRFData.get("data").get("credit_balance");
+	daily__hnt_est_rewards = HotspotRFData.get("data").get("daily__hnt_est_rewards").round(3);
+	debug_mode = HotspotRFData.get("data").get("debug_mode");
+	est_avg = HotspotRFData.get("data").get("est_avg").round(5);
+	est_scale = HotspotRFData.get("data").get("est_scale").round(2);
+	info "est_scale: " + est_scale;
+	hotspots_reached_deadzone = HotspotRFData.get("data").get("hotspots_reached_deadzone");
+	hotspots_reached_safezone = HotspotRFData.get("data").get("hotspots_reached_safezone");
+	hotspots_reached_total = HotspotRFData.get("data").get("hotspots_reached_total");
+	portal_view = HotspotRFData.get("data").get("portal_view");
+	settings_used = HotspotRFData.get("data").get("settings_used");
+	///// Settings Used Sub Values
+	frequency = settings_used.get(0).get("frequency");
+	gain = settings_used.get(0).get("gain");
+	height = settings_used.get(0).get("height");
+	loss = settings_used.get(0).get("loss");
+	terrain = settings_used.get(0).get("terrain");
+	units = settings_used.get(0).get("units");
+	/////
+	simulation_location = HotspotRFData.get("data").get("simulation_location");
+	///// Simulation Location Sub Values
+	address = simulation_location.get(0).get("address");
+	lat = simulation_location.get(0).get("lat");
+	lng = simulation_location.get(0).get("lng");
+	res8 = simulation_location.get(0).get("res8");
+	/////////////////////////
+	///// Update Lead Map
+	LeadMap = Map();
+	/////
+	LeadMap.put("Daily_HNT_Estimate",daily__hnt_est_rewards);
+	LeadMap.put("Above_Below_Average",est_avg);
+	LeadMap.put("Reward_Scale",est_scale);
+	LeadMap.put("Portal_View",portal_view);
+	LeadMap.put("Total_Hotspots_Hit",hotspots_reached_total);
+	LeadMap.put("Dead_Zone_Hotspots",hotspots_reached_deadzone);
+	LeadMap.put("Safe_Zone_Hotspots",hotspots_reached_safezone);
+	LeadMap.put("Address_Used",address);
+	/////////////////////////
+	///// Update Lead Function
+	UpdateLead = zoho.crm.updateRecord("Leads",LeadID,LeadMap);
+	info "UpdateLead: " + UpdateLead;
+	if(UpdateLead.get("id") != null)
+	{
+		return "Lead successfully simulated on first try.";
+	}
+	else
+	{
+		return "Lead not updated on first try.";
+	}
+}
+ catch (e)
+{	// Handle Exception here
+	if(e.contains("SocketTimeoutException"))
+	{
+		// Create false timer - give system additional time to complete task
+		try 
+		{
+			getUrl("https://httpstat.us/200?sleep=45000");
+		}
+ catch (e)
+		{			try 
+			{
+				// tell api just checking
+				ParamMap.put("check","true");
+				// False timer finished - 40 seconds added - checking job
+				HotspotRFData = invokeurl
+				[
+					url :"https://app.api.hotspotrf.com/v1"
+					type :GET
+					parameters:ParamMap
+				];
+				info "HotspotRFData: " + HotspotRFData;
+				/////////////////////////
+				///// HotspotRFData Returned Values
+				credit_balance = HotspotRFData.get("data").get("credit_balance");
+				daily__hnt_est_rewards = HotspotRFData.get("data").get("daily__hnt_est_rewards").round(3);
+				debug_mode = HotspotRFData.get("data").get("debug_mode");
+				est_avg = HotspotRFData.get("data").get("est_avg").round(5);
+				est_scale = HotspotRFData.get("data").get("est_scale").round(2);
+				info "est_scale: " + est_scale;
+				hotspots_reached_deadzone = HotspotRFData.get("data").get("hotspots_reached_deadzone");
+				hotspots_reached_safezone = HotspotRFData.get("data").get("hotspots_reached_safezone");
+				hotspots_reached_total = HotspotRFData.get("data").get("hotspots_reached_total");
+				portal_view = HotspotRFData.get("data").get("portal_view");
+				settings_used = HotspotRFData.get("data").get("settings_used");
+				///// Settings Used Sub Values
+				frequency = settings_used.get(0).get("frequency");
+				gain = settings_used.get(0).get("gain");
+				height = settings_used.get(0).get("height");
+				loss = settings_used.get(0).get("loss");
+				terrain = settings_used.get(0).get("terrain");
+				units = settings_used.get(0).get("units");
+				/////
+				simulation_location = HotspotRFData.get("data").get("simulation_location");
+				///// Simulation Location Sub Values
+				address = simulation_location.get(0).get("address");
+				lat = simulation_location.get(0).get("lat");
+				lng = simulation_location.get(0).get("lng");
+				res8 = simulation_location.get(0).get("res8");
+				/////////////////////////
+				///// Update Lead Map
+				LeadMap = Map();
+				/////
+				LeadMap.put("Daily_HNT_Estimate",daily__hnt_est_rewards);
+				LeadMap.put("Above_Below_Average",est_avg);
+				LeadMap.put("Reward_Scale",est_scale);
+				LeadMap.put("Portal_View",portal_view);
+				LeadMap.put("Total_Hotspots_Hit",hotspots_reached_total);
+				LeadMap.put("Dead_Zone_Hotspots",hotspots_reached_deadzone);
+				LeadMap.put("Safe_Zone_Hotspots",hotspots_reached_safezone);
+				LeadMap.put("Address_Used",address);
+				/////////////////////////
+				///// Update Lead Function
+				UpdateLead = zoho.crm.updateRecord("Leads",LeadID,LeadMap);
+				info "UpdateLead: " + UpdateLead;
+				if(UpdateLead.get("id") != null)
+				{
+					return "Lead successfully updated on check call.";
+				}
+				else
+				{
+					return "Lead not updated on second try.";
+				}
+			}
+ catch (e)
+			{				// Error on second attempt
+				return "Unable to grab results after 1 min and 30 seconds.";
+			}
+		}
+	}
+	else
+	{
+		// Unknown error
+		return e;
+	}
+}
